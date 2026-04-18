@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Embedded Python Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --card: #111827;
+    --border: #1f2d45;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --correct: #00e676;
+    --wrong: #ff1744;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --glow: 0 0 24px rgba(0,229,255,0.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(124,58,237,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(0,229,255,0.08) 0%, transparent 60%);
+  }
+
+  /* ── HEADER ── */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+    animation: fadeDown 0.6s ease;
+  }
+  .header .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .header h1 {
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff 30%, var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.1;
+  }
+  .header p {
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    margin-top: 8px;
+    letter-spacing: 1px;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px;
+    width: 100%;
+    max-width: 680px;
+    box-shadow: var(--glow), 0 24px 60px rgba(0,0,0,0.4);
+    animation: fadeUp 0.5s ease;
+  }
+
+  /* ── UNIT SELECTION ── */
+  #unit-screen h2 {
+    font-size: 1.1rem;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+  .unit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .unit-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 14px 16px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .unit-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .unit-btn span { position: relative; z-index: 1; }
+  .unit-btn .count {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-top: 4px;
+    transition: color 0.2s;
+  }
+  .unit-btn:hover, .unit-btn.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 16px rgba(0,229,255,0.15);
+  }
+  .unit-btn:hover::before, .unit-btn.selected::before { opacity: 0.12; }
+  .unit-btn.selected { border-color: var(--accent); }
+  .unit-btn.all-btn {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(0,229,255,0.1));
+    border-color: var(--accent2);
+  }
+
+  /* ── QUESTION COUNT ── */
+  .count-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 20px 0 24px;
+    flex-wrap: wrap;
+  }
+  .count-row label {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .count-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    padding: 8px 14px;
+    width: 80px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .count-input:focus { border-color: var(--accent); }
+  #max-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 14px 32px;
+    cursor: pointer;
+    width: 100%;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(0,229,255,0.2);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,229,255,0.3); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ── PROGRESS ── */
+  .progress-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .progress-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .score-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  /* ── QUESTION ── */
+  .question-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .question-text {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 28px;
+    color: #fff;
+  }
+
+  /* ── OPTIONS ── */
+  .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .option-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 14px 18px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .option-btn .opt-key {
+    background: var(--border);
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 8px;
+    color: var(--accent);
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.05);
+    transform: translateX(4px);
+  }
+  .option-btn:hover:not(:disabled) .opt-key {
+    background: var(--accent);
+    color: #000;
+  }
+  .option-btn.correct {
+    border-color: var(--correct);
+    background: rgba(0,230,118,0.08);
+    color: var(--correct);
+  }
+  .option-btn.correct .opt-key { background: var(--correct); color: #000; }
+  .option-btn.wrong {
+    border-color: var(--wrong);
+    background: rgba(255,23,68,0.08);
+    color: var(--wrong);
+  }
+  .option-btn.wrong .opt-key { background: var(--wrong); color: #fff; }
+  .option-btn:disabled { cursor: default; }
+
+  /* ── FEEDBACK ── */
+  .feedback {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: none;
+    animation: fadeUp 0.2s ease;
+  }
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: rgba(0,230,118,0.1); color: var(--correct); border: 1px solid rgba(0,230,118,0.2); }
+  .feedback.wrong-fb { background: rgba(255,23,68,0.1); color: var(--wrong); border: 1px solid rgba(255,23,68,0.2); }
+
+  /* ── RESULT SCREEN ── */
+  #result-screen { text-align: center; }
+  .result-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(var(--accent) var(--pct), var(--border) 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    position: relative;
+  }
+  .result-circle::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: var(--card);
+  }
+  .result-score {
+    position: relative;
+    z-index: 1;
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .result-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+  .result-msg {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+  .result-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .stat-box .stat-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-box .stat-lbl {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .btn-row { display: flex; gap: 12px; }
+  .btn-secondary {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hidden { display: none !important; }
+
+  @media (max-width: 500px) {
+    .unit-grid { grid-template-columns: 1fr; }
+    .card { padding: 24px 18px; }
+    .result-stats { grid-template-columns: 1fr 1fr; }
+    .btn-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="badge">24EC101201 · ECE & EEE</div>
+  <h1>Embedded Python<br>Programming Quiz</h1>
+  <p>DEPT: ECE & EEE &nbsp;·&nbsp; I / II SEM</p>
+</div>
+
+<!-- ── UNIT SELECTION ── -->
+<div class="card" id="unit-screen">
+  <h2>// Select Unit</h2>
+  <div class="unit-grid" id="unit-grid"></div>
+
+  <div class="count-row">
+    <label>Questions:</label>
+    <input type="number" class="count-input" id="num-input" min="1" value="10"/>
+    <span id="max-label">/ 15 available</span>
+  </div>
+
+  <button class="btn-primary" id="start-btn" onclick="startQuiz()">Start Quiz →</button>
+</div>
+
+<!-- ── QUIZ SCREEN ── -->
+<div class="card hidden" id="quiz-screen">
+  <div class="progress-row">
+    <span class="progress-label" id="q-label">Question 1 / 10</span>
+    <span class="score-label" id="score-label">Score: 0</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <div class="question-num" id="unit-tag">UNIT 1</div>
+  <div class="question-text" id="question-text">Loading...</div>
+
+  <div class="options" id="options-container"></div>
+
+  <div class="feedback" id="feedback"></div>
+
+  <button class="btn-primary" id="next-btn" onclick="nextQuestion()" style="display:none">Next Question →</button>
+</div>
+
+<!-- ── RESULT SCREEN ── -->
+<div class="card hidden" id="result-screen">
+  <div class="result-circle" id="result-circle">
+    <div class="result-score" id="result-score">0%</div>
+  </div>
+  <div class="result-title" id="result-title">Well Done!</div>
+  <div class="result-msg" id="result-msg"></div>
+
+  <div class="result-stats">
+    <div class="stat-box">
+      <div class="stat-val" id="stat-correct">0</div>
+      <div class="stat-lbl">Correct</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="stat-wrong">0</div>
+      <div class="stat-lbl">Wrong</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="stat-pct">0%</div>
+      <div class="stat-lbl">Score</div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-secondary" onclick="restartSame()">↺ Retry</button>
+    <button class="btn-primary" style="flex:2" onclick="goHome()">← Choose Unit</button>
+  </div>
+</div>
+
+<script>
+const QB = {
+  "Unit 1 - Intro to Python": [
+    {q:"Which is true about Python?",opts:["Low-level programming language","Compiled language","High-level, interpreted language","Requires explicit variable type declaration"],ans:2},
+    {q:"Which command starts the Python interpreter in interactive mode?",opts:["python3","start python","python interactive","python"],ans:3},
+    {q:"What does the Python interpreter do?",opts:["Compiles code into machine language","Converts code into Java","Executes Python code line by line","Runs code in parallel"],ans:2},
+    {q:"Which is NOT a data type in Python?",opts:["int","float","char","string"],ans:2},
+    {q:"What is the value of: 3 + 5 * 2?",opts:["16","13","11","10"],ans:1},
+    {q:"Which data type represents decimal numbers in Python?",opts:["int","string","float","boolean"],ans:2},
+    {q:"Correct syntax for creating a list in Python?",opts:["list = (1,2,3)","list = [1,2,3]","list = {1,2,3}","list = <1,2,3>"],ans:1},
+    {q:"Which data type stores True or False in Python?",opts:["int","float","bool","string"],ans:2},
+    {q:"What is the result of 5 == 5 in Python?",opts:["False","True","Error","None"],ans:1},
+    {q:"Which operator is used for exponentiation in Python?",opts:["*","**","^","%"],ans:1},
+    {q:"Correct way to assign value 10 to variable x?",opts:["10 = x","x := 10","x = 10","x == 10"],ans:2},
+    {q:"What is the output of: print(7 // 2)?",opts:["3","3.5","4","2.5"],ans:0},
+    {q:"Which operator is used for floor division in Python?",opts:["/","//","%","^"],ans:1},
+    {q:"Correct syntax to comment a line in Python?",opts:["// comment","# comment","/* comment */","-- comment"],ans:1},
+    {q:"Which is an example of an expression in Python?",opts:["x = 5","if x == 5:","2 + 3","print(x)"],ans:2},
+  ],
+  "Unit 2 - Control Flow & Functions": [
+    {q:"Output of: print(3 + 4 * 2)?",opts:["14","11","7","10"],ans:1},
+    {q:"Which is a valid variable name in Python?",opts:["2var","_var2","var-2","2_var"],ans:1},
+    {q:"Keyword used to define a function in Python?",opts:["func","function","def","define"],ans:2},
+    {q:"Default return value of a function with no return statement?",opts:["None","0","False","Undefined"],ans:0},
+    {q:"Operator that checks equality between two values?",opts:["==","=","===","!="],ans:0},
+    {q:"Output of: x=[1,2,3]; x.append(4); print(x)?",opts:["[1,2,3]","[1,2,3,4]","Error","[4,1,2,3]"],ans:1},
+    {q:"Keyword used to handle exceptions in Python?",opts:["catch","except","finally","error"],ans:1},
+    {q:"Result of: len('hello')?",opts:["4","5","6","Error"],ans:1},
+    {q:"Purpose of the break statement in a loop?",opts:["Exit the loop","Skip current iteration","Continue next iteration","None"],ans:0},
+    {q:"Operator used to combine two lists in Python?",opts:["+","&","*","|"],ans:0},
+    {q:"Result of: print('apple' == 'apple')?",opts:["True","False","Error","Undefined"],ans:0},
+    {q:"Syntax used to create a tuple in Python?",opts:["[]","{}","()","None"],ans:2},
+    {q:"Correct statement about Python lists?",opts:["Lists are immutable","Lists store only integers","Lists are ordered","Lists don't allow duplicates"],ans:2},
+    {q:"Valid string slicing operation in Python?",opts:["s[1:3]","s(1,3)","s{1,3}","s[3,1]"],ans:0},
+    {q:"Python function to get absolute value of a number?",opts:["abs()","round()","float()","int()"],ans:0},
+  ],
+  "Unit 3 - Strings & Lists": [
+    {q:"Operator that accesses individual characters in a string?",opts:["Concatenation","Indexing","Slicing","Looping"],ans:1},
+    {q:"Output of: s='Python'; print(s[0])?",opts:["P","p","SyntaxError","Error"],ans:0},
+    {q:"Result of: s='Python'; print(s[1:4])?",opts:["Py","yth","Pyth","Python"],ans:1},
+    {q:"Which is correct about strings in Python?",opts:["Mutable","Immutable","Lists","Not iterable"],ans:1},
+    {q:"Output of: s='Python'; print(s[-1])?",opts:["P","n","y","SyntaxError"],ans:1},
+    {q:"Result of: s1='Hello'; s2='World'; print(s1+' '+s2)?",opts:["Hello World","HelloWorld","World Hello","SyntaxError"],ans:0},
+    {q:"Function that checks the length of a string?",opts:["size()","length()","count()","len()"],ans:3},
+    {q:"What does the lower() method do?",opts:["Converts to uppercase","Converts to lowercase","Removes spaces","Counts lowercase letters"],ans:1},
+    {q:"What does replace() method do in Python?",opts:["Changes case","Replaces a substring","Slices the string","Returns reverse"],ans:1},
+    {q:"Method that returns a list of characters in a string?",opts:["split()","join()","list()","slice()"],ans:2},
+    {q:"Operator to check if a substring exists in a string?",opts:["in","exist()","find()","search()"],ans:0},
+    {q:"Output of: s='Hello'; print(s[1:3])?",opts:["el","ll","Hello","lo"],ans:0},
+    {q:"Method that adds element to end of a list?",opts:["insert()","append()","add()","extend()"],ans:1},
+    {q:"Method that removes element by value from a list?",opts:["pop()","remove()","delete()","discard()"],ans:1},
+    {q:"Which removes and returns the last element of a list?",opts:["pop()","remove()","del()","clear()"],ans:0},
+    {q:"Correct way to create a list in Python?",opts:["list=(1,2,3)","list=[1,2,3]","list={1,2,3}","list=<1,2,3>"],ans:1},
+  ],
+  "Unit 4 - Modules & Libraries": [
+    {q:"Library used for mathematical operations?",opts:["numpy","math","matplotlib","scipy"],ans:1},
+    {q:"Command to import a module in Python?",opts:["import module_name","include module_name","load module_name","from module import *"],ans:0},
+    {q:"What is a Python package?",opts:["A file with Python code","A collection of related modules","A collection of functions","None of the above"],ans:1},
+    {q:"Which file is mandatory in a Python package?",opts:["init.py","setup.py","module.py","main.py"],ans:0},
+    {q:"Correct way to call a function from a module?",opts:["module.function()","function.module()","import.function()","module()"],ans:0},
+    {q:"Library used for data visualization?",opts:["numpy","matplotlib","pandas","scipy"],ans:1},
+    {q:"Purpose of math.sqrt() function?",opts:["Calculate square","Find square root","Round to integer","None"],ans:1},
+    {q:"Valid way to create a package in Python?",opts:["Folder with modules + __init__.py","Create .pkg file","Create text file","None"],ans:0},
+    {q:"Library that handles arrays in Python?",opts:["scipy","math","numpy","matplotlib"],ans:2},
+    {q:"Command to import a specific function from a module?",opts:["import module_name","include module_name","load module_name","from module import function"],ans:3},
+    {q:"Function to plot a scatter plot in matplotlib?",opts:["plt.bar()","plt.plot()","plt.scatter()","plt.hist()"],ans:2},
+    {q:"Function to plot a line chart in matplotlib?",opts:["plt.bar()","plt.plot()","plt.scatter()","plt.hist()"],ans:1},
+    {q:"Library that builds GUIs in Python?",opts:["matplotlib","numpy","tkinter","pandas"],ans:2},
+    {q:"Method that creates a new window in Tkinter?",opts:["Tk()","Window()","create_window()","new_window()"],ans:0},
+    {q:"Python library used for scientific computing?",opts:["numpy","pandas","scipy","matplotlib"],ans:2},
+  ],
+  "Unit 5 - Microcontrollers": [
+    {q:"Which component is the brain of a microcontroller?",opts:["Memory","I/O pins","CPU","Clock"],ans:2},
+    {q:"Primary function of a microcontroller in embedded system?",opts:["Compute and control devices","Store data permanently","Communicate with internet","Increase power consumption"],ans:0},
+    {q:"Which component is NOT part of a microcontroller?",opts:["RAM","Flash Memory","GPU","Clock"],ans:2},
+    {q:"Purpose of timers and counters in a microcontroller?",opts:["Store data","Process commands","Measure time intervals and create delays","Convert analog to digital"],ans:2},
+    {q:"Which memory stores firmware in a microcontroller?",opts:["SRAM","Flash memory","EEPROM","Cache memory"],ans:1},
+    {q:"Function of SRAM in a microcontroller?",opts:["Permanent program storage","Temporary data storage during execution","Increase processing speed","Control I/O devices"],ans:1},
+    {q:"How does higher clock speed affect a microcontroller?",opts:["Faster instruction execution","Increases memory size","Decreases energy consumption","Suits only basic tasks"],ans:0},
+    {q:"Which is non-volatile memory in a microcontroller?",opts:["SRAM","Flash memory","Registers","Cache memory"],ans:1},
+    {q:"Language commonly used for microcontrollers?",opts:["JavaScript","Python","C/C++","Java"],ans:2},
+    {q:"Language used with the Arduino platform?",opts:["Python","C/C++","Java","Assembly"],ans:1},
+    {q:"What does Assembly language provide?",opts:["High-level language","Low-level control over hardware","Portability","Not suitable for embedded"],ans:1},
+    {q:"Framework to program microcontrollers in Python?",opts:["MicroPython","Arduino IDE","React","TensorFlow"],ans:0},
+    {q:"Main advantage of C++ over C in microcontroller programming?",opts:["Faster performance","Object-oriented features and better organization","Simplicity","Easier to compile"],ans:1},
+    {q:"Programming language designed for embedded systems?",opts:["HTML","C","JavaScript","Swift"],ans:1},
+    {q:"Development board most used by beginners?",opts:["Raspberry Pi","Arduino Uno","STM32","BeagleBone Black"],ans:1},
+  ],
+  "Unit 6 - Embedded Systems": [
+    {q:"What is an embedded system?",opts:["Computer for general-purpose tasks","System designed for specific tasks","Computer that runs desktop apps","System that cannot interact with hardware"],ans:1},
+    {q:"Language commonly used in embedded systems programming?",opts:["Python","C","JavaScript","Swift"],ans:1},
+    {q:"Which is an example of an embedded system?",opts:["Desktop computer","Washing machine","Laptop","Server"],ans:1},
+    {q:"Advantage of embedded systems?",opts:["High power consumption","High processing speed","Low cost and energy efficiency","Complex design"],ans:2},
+    {q:"What does GPIO stand for?",opts:["General Purpose Input/Output","General Protocol Input/Output","General Power Input/Output","General Peripheral Input/Output"],ans:0},
+    {q:"Primary function of an embedded system?",opts:["Run desktop applications","Perform real-time operations","Handle web browsing","Serve as media center"],ans:1},
+    {q:"Which is NOT a component of an embedded system?",opts:["Microcontroller","User interface","Operating system","Internet browser"],ans:3},
+    {q:"Microcontroller used in Raspberry Pi Pico?",opts:["ARM Cortex-A72","ARM Cortex-M0+","Intel Core i7","AMD Ryzen"],ans:1},
+    {q:"What does 'real-time' mean in embedded systems?",opts:["Works only at night","Processes data without delays","Processes data after delay","Doesn't need a processor"],ans:1},
+    {q:"Common use case for embedded systems?",opts:["Gaming consoles","Digital cameras","Washing machines","All of the above"],ans:3},
+    {q:"Main advantage of using Python in embedded systems?",opts:["High processing power","Low-level memory management","Easy syntax and rapid prototyping","Hardware independence"],ans:2},
+    {q:"Which microcontroller is compatible with Python for embedded dev?",opts:["Raspberry Pi Pico","Arduino Uno","ESP32","All of the above"],ans:3},
+    {q:"Which hardware is compatible with MicroPython?",opts:["ESP32","STM32","Raspberry Pi Pico","All of the above"],ans:3},
+    {q:"Main advantage of MicroPython over C?",opts:["It is faster","Easier syntax and faster development","Consumes more power","Requires complex hardware"],ans:1},
+    {q:"What does 'REPL' stand for in MicroPython?",opts:["Read, Evaluate, Print, Loop","Run, Execute, Print, Loop","Read, Execute, Print, List","Run, Evaluate, Process, Loop"],ans:0},
+    {q:"Typical example of a real-time embedded system?",opts:["Video streaming service","Washing machine controller","Word processor","Gaming console"],ans:1},
+  ],
+};
+
+const units = Object.keys(QB);
+let selectedUnit = null;
+let questions = [], current = 0, score = 0, answered = false;
+
+// Build unit buttons
+const grid = document.getElementById('unit-grid');
+units.forEach((u, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'unit-btn';
+  btn.innerHTML = `<span>${u}<span class="count">${QB[u].length} questions</span></span>`;
+  btn.onclick = () => selectUnit(i);
+  grid.appendChild(btn);
+});
+const allBtn = document.createElement('button');
+allBtn.className = 'unit-btn all-btn';
+allBtn.innerHTML = `<span>🔀 All Units Mixed<span class="count">${units.reduce((s,u)=>s+QB[u].length,0)} questions total</span></span>`;
+allBtn.onclick = () => selectUnit(-1);
+grid.appendChild(allBtn);
+
+function selectUnit(idx) {
+  selectedUnit = idx;
+  document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('selected'));
+  const btns = document.querySelectorAll('.unit-btn');
+  btns[idx === -1 ? units.length : idx].classList.add('selected');
+  const max = idx === -1 ? units.reduce((s,u)=>s+QB[u].length,0) : QB[units[idx]].length;
+  document.getElementById('max-label').textContent = `/ ${max} available`;
+  const inp = document.getElementById('num-input');
+  inp.max = max;
+  if (parseInt(inp.value) > max) inp.value = max;
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function startQuiz() {
+  if (selectedUnit === null) { alert('Please select a unit first!'); return; }
+  const num = parseInt(document.getElementById('num-input').value);
+  if (!num || num < 1) { alert('Please enter a valid number of questions.'); return; }
+
+  let pool = selectedUnit === -1
+    ? units.flatMap(u => QB[u].map(q => ({...q, unit: u})))
+    : QB[units[selectedUnit]].map(q => ({...q, unit: units[selectedUnit]}));
+
+  questions = shuffle(pool).slice(0, num);
+  current = 0; score = 0; answered = false;
+
+  document.getElementById('unit-screen').classList.add('hidden');
+  document.getElementById('result-screen').classList.add('hidden');
+  document.getElementById('quiz-screen').classList.remove('hidden');
+  loadQuestion();
+}
+
+function loadQuestion() {
+  answered = false;
+  const q = questions[current];
+  const total = questions.length;
+
+  document.getElementById('q-label').textContent = `Question ${current+1} / ${total}`;
+  document.getElementById('score-label').textContent = `Score: ${score}`;
+  document.getElementById('progress-fill').style.width = `${(current/total)*100}%`;
+  document.getElementById('unit-tag').textContent = q.unit.toUpperCase();
+  document.getElementById('question-text').textContent = q.q;
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.textContent = '';
+
+  const container = document.getElementById('options-container');
+  container.innerHTML = '';
+  const keys = ['A','B','C','D'];
+
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="opt-key">${keys[i]}</span><span>${opt}</span>`;
+    btn.onclick = () => selectAnswer(i, q.ans);
+    container.appendChild(btn);
+  });
+
+  document.getElementById('next-btn').style.display = 'none';
+}
+
+function selectAnswer(chosen, correct) {
+  if (answered) return;
+  answered = true;
+
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach(b => b.disabled = true);
+  btns[correct].classList.add('correct');
+
+  const fb = document.getElementById('feedback');
+  if (chosen === correct) {
+    score++;
+    btns[chosen].classList.add('correct');
+    fb.textContent = '✅ Correct! Great job!';
+    fb.className = 'feedback correct-fb show';
+  } else {
+    btns[chosen].classList.add('wrong');
+    fb.textContent = `❌ Wrong! Correct answer: ${['A','B','C','D'][correct]}) ${questions[current].opts[correct]}`;
+    fb.className = 'feedback wrong-fb show';
+  }
+
+  document.getElementById('score-label').textContent = `Score: ${score}`;
+  document.getElementById('next-btn').style.display = 'block';
+  document.getElementById('next-btn').textContent =
+    current + 1 < questions.length ? 'Next Question →' : 'View Results →';
+}
+
+function nextQuestion() {
+  current++;
+  if (current < questions.length) {
+    loadQuestion();
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  document.getElementById('quiz-screen').classList.add('hidden');
+  document.getElementById('result-screen').classList.remove('hidden');
+
+  const total = questions.length;
+  const pct = Math.round((score / total) * 100);
+
+  document.getElementById('result-circle').style.setProperty('--pct', `${pct}%`);
+  document.getElementById('result-score').textContent = pct + '%';
+  document.getElementById('stat-correct').textContent = score;
+  document.getElementById('stat-wrong').textContent = total - score;
+  document.getElementById('stat-pct').textContent = pct + '%';
+
+  let title, msg;
+  if (pct === 100) { title = '🌟 Perfect!'; msg = 'Outstanding! You answered every question correctly!'; }
+  else if (pct >= 80) { title = '😊 Excellent!'; msg = 'Great work! You have a strong understanding of the topics.'; }
+  else if (pct >= 60) { title = '👍 Good Job!'; msg = 'Nice effort! Review the topics you missed and try again.'; }
+  else if (pct >= 40) { title = '📚 Keep Practicing!'; msg = 'You are getting there! Study more and retry.'; }
+  else { title = '💪 Don\'t Give Up!'; msg = 'Review your notes and try again. You can do it, Abi!'; }
+
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-msg').textContent = msg;
+}
+
+function restartSame() {
+  startQuiz();
+}
+
+function goHome() {
+  document.getElementById('result-screen').classList.add('hidden');
+  document.getElementById('quiz-screen').classList.add('hidden');
+  document.getElementById('unit-screen').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
